@@ -10,6 +10,7 @@ import { MarketDataModule } from './market-data/market-data.module';
 import { WebsocketModule } from './websocket/websocket.module';
 import { BlockchainModule } from './blockchain/blockchain.module';
 import { PositionsModule } from './positions/positions.module';
+import { SearchModule } from './search/search.module';
 import { createKeyv } from '@keyv/redis';
 
 @Module({
@@ -34,6 +35,7 @@ import { createKeyv } from '@keyv/redis';
     WebsocketModule,
     BlockchainModule,
     PositionsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],
