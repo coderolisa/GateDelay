@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import DashboardLayout from "../../components/layout/DashboardLayout";
 import MarketCard, { Market } from "../../components/market/MarketCard";
 
@@ -76,13 +77,22 @@ export default function DashboardPage() {
     <DashboardLayout>
       <div className="space-y-6 max-w-6xl mx-auto">
         {/* Page heading */}
-        <div>
-          <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
-            Markets
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
-            Browse and trade active flight prediction markets.
-          </p>
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>
+              Markets
+            </h1>
+            <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
+              Browse and trade active flight prediction markets.
+            </p>
+          </div>
+          <Link
+            href="/markets/create"
+            className="rounded-lg px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            style={{ background: "#3b82f6" }}
+          >
+            + Create Market
+          </Link>
         </div>
 
         {/* Summary stats */}
