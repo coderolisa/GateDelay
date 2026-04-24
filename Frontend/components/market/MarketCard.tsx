@@ -1,24 +1,21 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import StatusIndicator, { MarketStatus } from "./StatusIndicator";
 
 export interface Market {
   id: string;
   title: string;
   description: string;
-  status: "open" | "closed" | "resolved";
+  status: MarketStatus;
   yesPrice: number;
   noPrice: number;
   volume: number;
   liquidity: number;
+  resolvedAt?: string;
+  outcome?: "YES" | "NO";
   image?: string;
 }
-
-const STATUS_STYLES: Record<Market["status"], { bg: string; color: string; label: string }> = {
-  open:     { bg: "#22c55e22", color: "#22c55e", label: "OPEN" },
-  closed:   { bg: "#f59e0b22", color: "#f59e0b", label: "CLOSED" },
-  resolved: { bg: "#6366f122", color: "#6366f1", label: "RESOLVED" },
-};
 
 interface MarketCardProps {
   market: Market;
@@ -38,7 +35,7 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
     return () => clearInterval(id);
   }, [market.yesPrice, market.noPrice, market.status]);
 
-  const status = STATUS_STYLES[market.status];
+  const status = market.status;
 
   return (
     <Link
@@ -68,12 +65,9 @@ export default function MarketCard({ market, onClick }: MarketCardProps) {
         {/* Status + title */}
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <span
-              className="inline-block text-xs font-semibold px-2 py-0.5 rounded-full mb-1"
-              style={{ background: status.bg, color: status.color }}
-            >
-              {status.label}
-            </span>
+            <div className="mb-1">
+              <StatusIndicator status={status} resolvedAt={market.resolvedAt} outcome={market.outcome} variant="full" />
+            </div>
             <h3
               className="font-semibold text-sm leading-snug line-clamp-2"
               style={{ color: "var(--foreground)" }}

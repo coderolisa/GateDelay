@@ -1,19 +1,21 @@
 "use client";
 import { useState, Suspense } from "react";
 import { StatsSkeleton, ChartSkeleton } from "../../components/ui/Skeleton";
-import PriceChart from "../../../components/chart/PriceChart";
+import StatusIndicator from "../../../components/market/StatusIndicator";
 
 // Mock data — replace with real contract/API calls
 const MOCK_MARKET = {
   id: "1",
   title: "Will AA123 arrive on time?",
   description: "American Airlines flight AA123 from JFK to LAX on Apr 25, 2026.",
-  status: "open" as "open" | "closed" | "resolved",
+  status: "open" as "open" | "closed" | "resolved" | "disputed",
   yesPrice: 0.62,
   noPrice: 0.38,
   volume: 14820,
   liquidity: 5400,
   participants: 87,
+  resolvedAt: undefined as string | undefined,
+  outcome: undefined as "YES" | "NO" | undefined,
   recentTrades: [
     { side: "YES", amount: 50, price: 0.62, time: "2m ago" },
     { side: "NO", amount: 120, price: 0.38, time: "5m ago" },
@@ -21,12 +23,6 @@ const MOCK_MARKET = {
     { side: "NO", amount: 75, price: 0.39, time: "18m ago" },
     { side: "YES", amount: 300, price: 0.60, time: "25m ago" },
   ],
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  open: "#22c55e",
-  closed: "#f59e0b",
-  resolved: "#6366f1",
 };
 
 export default function MarketDetailPage({ params }: { params: { id: string } }) {
@@ -43,12 +39,12 @@ export default function MarketDetailPage({ params }: { params: { id: string } })
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span
-              className="text-xs font-semibold px-2 py-0.5 rounded-full"
-              style={{ background: STATUS_COLORS[market.status] + "22", color: STATUS_COLORS[market.status] }}
-            >
-              {market.status.toUpperCase()}
-            </span>
+            <StatusIndicator
+              status={market.status}
+              resolvedAt={market.resolvedAt}
+              outcome={market.outcome}
+              variant="full"
+            />
             <span className="text-xs" style={{ color: "var(--muted)" }}>Market #{market.id}</span>
           </div>
           <h1 className="text-xl font-semibold" style={{ color: "var(--foreground)" }}>{market.title}</h1>
