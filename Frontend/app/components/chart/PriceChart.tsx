@@ -1,9 +1,3 @@
-"use client";
-
-export default function PriceChart() {
-  return (
-    <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
-      <p>Price Chart Placeholder</p>
-    </div>
-  );
-}
+// Re-export the real PriceChart from the shared components directory.
+export { default } from "@/components/chart/PriceChart";
+export type { PricePoint } from "@/components/chart/PriceChart";
