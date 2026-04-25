@@ -1,3 +1,4 @@
+"use client";
 import CreateMarketForm from "../../../components/market/CreateMarketForm";
 import dynamic from "next/dynamic";
 
