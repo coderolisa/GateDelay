@@ -9,6 +9,7 @@ import { WebSocketProvider } from "./components/WebSocketProvider";
 import { PageErrorBoundary } from "./components/ui/PageErrorBoundary";
 import { GlobalErrorHandler } from "./components/GlobalErrorHandler";
 import PendingTransactions from "../components/transactions/PendingTransactions";
+import BackupReminder from "../components/wallet/BackupReminder";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -29,6 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ParticleClientWrapper>
                 <WebSocketProvider>
                   <Navbar />
+                  <BackupReminder />
                   <div className="flex-1">{children}</div>
                   <PendingTransactions />
                 </WebSocketProvider>
