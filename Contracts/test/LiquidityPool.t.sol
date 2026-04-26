@@ -13,7 +13,7 @@ contract LiquidityPoolTest is Test {
     LiquidityPool internal pool;
 
     address internal alice = address(0xA11CE);
-    address internal bob   = address(0xB0B);
+    address internal bob = address(0xB0B);
     address internal marketAddr = address(0xDEAD);
 
     uint256 constant INITIAL_SUPPLY = 1_000_000;
@@ -27,7 +27,7 @@ contract LiquidityPoolTest is Test {
 
         // Fund alice and bob
         collateral.transfer(alice, 100_000 ether);
-        collateral.transfer(bob,   100_000 ether);
+        collateral.transfer(bob, 100_000 ether);
     }
 
     // =========================================================================
@@ -77,13 +77,13 @@ contract LiquidityPoolTest is Test {
         vm.assume(uint256(amount2) <= 100_000 ether);
 
         _approveAndDeposit(alice, uint256(amount1));
-        _approveAndDeposit(bob,   uint256(amount2));
+        _approveAndDeposit(bob, uint256(amount2));
 
         LiquidityPool.PoolMetrics memory metrics = pool.getPoolMetrics();
 
         uint256 aliceLp = pool.lpBalanceOf(alice);
-        uint256 bobLp   = pool.lpBalanceOf(bob);
-        uint256 sumLp   = aliceLp + bobLp;
+        uint256 bobLp = pool.lpBalanceOf(bob);
+        uint256 sumLp = aliceLp + bobLp;
 
         assertEq(metrics.totalLPSupply, sumLp, "totalLPSupply must equal sum of all LP balances");
     }

@@ -15,13 +15,13 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
  */
 contract MockOneInchRouter {
     struct SwapDescription {
-        IERC20          srcToken;
-        IERC20          dstToken;
+        IERC20 srcToken;
+        IERC20 dstToken;
         address payable srcReceiver;
         address payable dstReceiver;
-        uint256         amount;
-        uint256         minReturnAmount;
-        uint256         flags;
+        uint256 amount;
+        uint256 minReturnAmount;
+        uint256 flags;
     }
 
     uint256 public immutable fixedOutput;
@@ -30,12 +30,11 @@ contract MockOneInchRouter {
         fixedOutput = output;
     }
 
-    function swap(
-        address,
-        SwapDescription calldata desc,
-        bytes calldata,
-        bytes calldata
-    ) external payable returns (uint256 returnAmount, uint256 spentAmount) {
+    function swap(address, SwapDescription calldata desc, bytes calldata, bytes calldata)
+        external
+        payable
+        returns (uint256 returnAmount, uint256 spentAmount)
+    {
         desc.srcToken.transferFrom(msg.sender, address(this), desc.amount);
         desc.dstToken.transfer(desc.dstReceiver, fixedOutput);
         return (fixedOutput, desc.amount);
@@ -46,19 +45,19 @@ contract MockOneInchRouter {
 
 contract SwapRouterTest is Test {
     // ── Mainnet contract addresses ─────────────────────────────────────────────
-    address constant UNISWAP_ROUTER  = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // SwapRouter02
-    address constant UNISWAP_QUOTER  = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // QuoterV2
+    address constant UNISWAP_ROUTER = 0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45; // SwapRouter02
+    address constant UNISWAP_QUOTER = 0x61fFE014bA17989E743c5F6cB21bF9697530B21e; // QuoterV2
     address constant ONE_INCH_ROUTER = 0x1111111254EEB25477B68fb85Ed929f73A960582; // AggregationRouterV5
 
     // ── Mainnet token addresses ────────────────────────────────────────────────
     address constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
     address constant USDC = 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48;
-    address constant DAI  = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    address constant DAI = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
 
     // ── Uniswap V3 pool fee tiers ──────────────────────────────────────────────
-    uint24 constant FEE_LOW    = 500;   // 0.05 %  — stablecoin pairs
+    uint24 constant FEE_LOW = 500; // 0.05 %  — stablecoin pairs
     uint24 constant FEE_MEDIUM = 3_000; // 0.30 %  — standard pairs
-    uint24 constant FEE_HIGH   = 10_000;// 1.00 %  — exotic pairs
+    uint24 constant FEE_HIGH = 10_000; // 1.00 %  — exotic pairs
 
     // ── Protocol fee set at deployment: 30 bps = 0.30 % ──────────────────────
     uint256 constant PROTOCOL_FEE_BPS = 30;
@@ -68,8 +67,8 @@ contract SwapRouterTest is Test {
     address user;
 
     // ── Contracts under test ──────────────────────────────────────────────────
-    SwapRouter router;        // uses real 1inch router (Uniswap tests + best-rate Uniswap-wins)
-    SwapRouter routerMock1;   // uses MockOneInchRouter  (1inch tests + best-rate 1inch-wins)
+    SwapRouter router; // uses real 1inch router (Uniswap tests + best-rate Uniswap-wins)
+    SwapRouter routerMock1; // uses MockOneInchRouter  (1inch tests + best-rate 1inch-wins)
     MockOneInchRouter mockOneInch;
 
     // ── Setup ──────────────────────────────────────────────────────────────────
@@ -79,25 +78,14 @@ contract SwapRouterTest is Test {
         vm.createSelectFork(rpc);
 
         feeRecipient = makeAddr("feeRecipient");
-        user         = makeAddr("user");
+        user = makeAddr("user");
 
-        router = new SwapRouter(
-            UNISWAP_ROUTER,
-            UNISWAP_QUOTER,
-            ONE_INCH_ROUTER,
-            feeRecipient,
-            PROTOCOL_FEE_BPS
-        );
+        router = new SwapRouter(UNISWAP_ROUTER, UNISWAP_QUOTER, ONE_INCH_ROUTER, feeRecipient, PROTOCOL_FEE_BPS);
 
         // Mock 1inch returns 2 000 USDC regardless of input
         mockOneInch = new MockOneInchRouter(2_000e6);
-        routerMock1 = new SwapRouter(
-            UNISWAP_ROUTER,
-            UNISWAP_QUOTER,
-            address(mockOneInch),
-            feeRecipient,
-            PROTOCOL_FEE_BPS
-        );
+        routerMock1 =
+            new SwapRouter(UNISWAP_ROUTER, UNISWAP_QUOTER, address(mockOneInch), feeRecipient, PROTOCOL_FEE_BPS);
 
         // Fund test user with 10 WETH
         deal(WETH, user, 10 ether);
@@ -154,9 +142,9 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapSingle_deductsProtocolFee() public {
-        uint256 amountIn        = 1 ether;
-        uint256 expectedFee     = (amountIn * PROTOCOL_FEE_BPS) / 10_000;
-        uint256 wethBefore      = IERC20(WETH).balanceOf(feeRecipient);
+        uint256 amountIn = 1 ether;
+        uint256 expectedFee = (amountIn * PROTOCOL_FEE_BPS) / 10_000;
+        uint256 wethBefore = IERC20(WETH).balanceOf(feeRecipient);
 
         _approve(WETH, address(router), amountIn);
         vm.prank(user);
@@ -167,7 +155,7 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapSingle_revertsWhenSlippageTooTight() public {
-        uint256 amountIn     = 1 ether;
+        uint256 amountIn = 1 ether;
         uint256 impossibleMin = type(uint256).max;
 
         _approve(WETH, address(router), amountIn);
@@ -205,10 +193,10 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapMultiHop_deductsProtocolFee() public {
-        bytes memory path    = abi.encodePacked(WETH, uint24(3_000), USDC, uint24(500), DAI);
-        uint256 amountIn     = 1 ether;
-        uint256 expectedFee  = (amountIn * PROTOCOL_FEE_BPS) / 10_000;
-        uint256 wethBefore   = IERC20(WETH).balanceOf(feeRecipient);
+        bytes memory path = abi.encodePacked(WETH, uint24(3_000), USDC, uint24(500), DAI);
+        uint256 amountIn = 1 ether;
+        uint256 expectedFee = (amountIn * PROTOCOL_FEE_BPS) / 10_000;
+        uint256 wethBefore = IERC20(WETH).balanceOf(feeRecipient);
 
         _approve(WETH, address(router), amountIn);
         vm.prank(user);
@@ -227,16 +215,20 @@ contract SwapRouterTest is Test {
     // ── swapOneInch Tests (mock router) ────────────────────────────────────────
 
     function test_swapOneInch_executesViaMock() public {
-        uint256 amountIn    = 1 ether;
+        uint256 amountIn = 1 ether;
         uint256 expectedOut = mockOneInch.fixedOutput(); // 2 000 USDC
 
         _approve(WETH, address(routerMock1), amountIn);
         vm.prank(user);
         uint256 amountOut = routerMock1.swapOneInch(
-            WETH, USDC, amountIn, 1, user,
+            WETH,
+            USDC,
+            amountIn,
+            1,
+            user,
             address(mockOneInch), // executor = mock itself
-            "",                   // no permit
-            ""                    // no calldata needed by mock
+            "", // no permit
+            "" // no calldata needed by mock
         );
 
         assertEq(amountOut, expectedOut, "should receive mock fixed output");
@@ -244,9 +236,9 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapOneInch_deductsProtocolFee() public {
-        uint256 amountIn    = 1 ether;
+        uint256 amountIn = 1 ether;
         uint256 expectedFee = (amountIn * PROTOCOL_FEE_BPS) / 10_000;
-        uint256 wethBefore  = IERC20(WETH).balanceOf(feeRecipient);
+        uint256 wethBefore = IERC20(WETH).balanceOf(feeRecipient);
 
         _approve(WETH, address(routerMock1), amountIn);
         vm.prank(user);
@@ -256,7 +248,7 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapOneInch_revertsWhenOutputBelowMin() public {
-        uint256 amountIn      = 1 ether;
+        uint256 amountIn = 1 ether;
         uint256 impossibleMin = mockOneInch.fixedOutput() + 1; // 1 more than mock returns
 
         _approve(WETH, address(routerMock1), amountIn);
@@ -270,17 +262,25 @@ contract SwapRouterTest is Test {
     // ── swapBestRate Tests ─────────────────────────────────────────────────────
 
     function test_swapBestRate_usesUniswapWhenBetter() public {
-        uint256 amountIn       = 1 ether;
+        uint256 amountIn = 1 ether;
         // Give Uniswap a huge expected output so it wins routing
-        uint256 uniExpected    = type(uint256).max / 2;
+        uint256 uniExpected = type(uint256).max / 2;
         uint256 oneInchExpected = 1;
 
         _approve(WETH, address(router), amountIn);
         vm.prank(user);
         (uint256 amountOut, SwapRouter.Protocol proto) = router.swapBestRate(
-            WETH, USDC, FEE_MEDIUM, amountIn, 1, user,
-            uniExpected, oneInchExpected,
-            address(0), "", ""   // oneInch params unused when Uniswap wins
+            WETH,
+            USDC,
+            FEE_MEDIUM,
+            amountIn,
+            1,
+            user,
+            uniExpected,
+            oneInchExpected,
+            address(0),
+            "",
+            "" // oneInch params unused when Uniswap wins
         );
 
         assertGt(amountOut, 0);
@@ -288,16 +288,14 @@ contract SwapRouterTest is Test {
     }
 
     function test_swapBestRate_usesOneInchWhenBetter() public {
-        uint256 amountIn        = 1 ether;
-        uint256 uniExpected     = 1;                            // Uniswap "loses"
-        uint256 oneInchExpected = mockOneInch.fixedOutput();    // 1inch "wins"
+        uint256 amountIn = 1 ether;
+        uint256 uniExpected = 1; // Uniswap "loses"
+        uint256 oneInchExpected = mockOneInch.fixedOutput(); // 1inch "wins"
 
         _approve(WETH, address(routerMock1), amountIn);
         vm.prank(user);
         (uint256 amountOut, SwapRouter.Protocol proto) = routerMock1.swapBestRate(
-            WETH, USDC, FEE_MEDIUM, amountIn, 1, user,
-            uniExpected, oneInchExpected,
-            address(mockOneInch), "", ""
+            WETH, USDC, FEE_MEDIUM, amountIn, 1, user, uniExpected, oneInchExpected, address(mockOneInch), "", ""
         );
 
         assertEq(amountOut, mockOneInch.fixedOutput());
@@ -318,9 +316,7 @@ contract SwapRouterTest is Test {
     }
 
     function test_setProtocolFee_revertsAboveMax() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(SwapRouter.FeeTooHigh.selector, 101, 100)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SwapRouter.FeeTooHigh.selector, 101, 100));
         router.setProtocolFee(101);
     }
 
@@ -366,16 +362,12 @@ contract SwapRouterTest is Test {
     }
 
     function test_constructor_revertsFeeTooHigh() public {
-        vm.expectRevert(
-            abi.encodeWithSelector(SwapRouter.FeeTooHigh.selector, 101, 100)
-        );
+        vm.expectRevert(abi.encodeWithSelector(SwapRouter.FeeTooHigh.selector, 101, 100));
         new SwapRouter(UNISWAP_ROUTER, UNISWAP_QUOTER, ONE_INCH_ROUTER, feeRecipient, 101);
     }
 
     function test_constructor_zeroFeeAllowed() public {
-        SwapRouter zeroFeeRouter = new SwapRouter(
-            UNISWAP_ROUTER, UNISWAP_QUOTER, ONE_INCH_ROUTER, feeRecipient, 0
-        );
+        SwapRouter zeroFeeRouter = new SwapRouter(UNISWAP_ROUTER, UNISWAP_QUOTER, ONE_INCH_ROUTER, feeRecipient, 0);
         assertEq(zeroFeeRouter.protocolFeeBps(), 0);
     }
 
@@ -384,7 +376,7 @@ contract SwapRouterTest is Test {
     function testFuzz_feeDeductionIsExact(uint96 amountIn, uint8 feeBps) public {
         // Bound inputs: 0.01 ETH minimum so Uniswap V3 can fill the swap
         amountIn = uint96(bound(amountIn, 0.01 ether, 5 ether));
-        feeBps   = uint8(bound(feeBps, 0, 100));   // 0 – 100 bps
+        feeBps = uint8(bound(feeBps, 0, 100)); // 0 – 100 bps
 
         router.setProtocolFee(feeBps);
 

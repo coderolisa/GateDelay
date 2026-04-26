@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {IERC20}        from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {ERC20}         from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeERC20}     from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Ownable}       from "@openzeppelin/contracts/access/Ownable.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {UD60x18, ud}   from "@prb/math/src/UD60x18.sol";
+import {UD60x18, ud} from "@prb/math/src/UD60x18.sol";
 import {sqrt as uSqrt} from "@prb/math/src/Common.sol";
 
 /**
@@ -25,8 +25,8 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
 
     // ── Constants ──────────────────────────────────────────────────────────────
 
-    uint256 public constant FEE_DENOMINATOR  = 10_000;
-    uint256 public constant MAX_FEE_BPS      = 300;    // 3 % ceiling
+    uint256 public constant FEE_DENOMINATOR = 10_000;
+    uint256 public constant MAX_FEE_BPS = 300; // 3 % ceiling
     uint256 public constant MINIMUM_LIQUIDITY = 1_000; // permanently locked on first mint
 
     // ── Immutables ─────────────────────────────────────────────────────────────
@@ -38,29 +38,19 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
 
     uint112 private reserve0;
     uint112 private reserve1;
-    uint32  private blockTimestampLast;
+    uint32 private blockTimestampLast;
 
-    uint256 public feeRateBps;       // total swap fee in bps  (e.g. 30 = 0.30 %)
+    uint256 public feeRateBps; // total swap fee in bps  (e.g. 30 = 0.30 %)
     uint256 public protocolSharePct; // protocol's cut of feeRateBps  (0–100 %)
     address public feeRecipient;
 
-    uint256 public protocolFees0;    // uncollected protocol fees denominated in token0
-    uint256 public protocolFees1;    // uncollected protocol fees denominated in token1
+    uint256 public protocolFees0; // uncollected protocol fees denominated in token0
+    uint256 public protocolFees1; // uncollected protocol fees denominated in token1
 
     // ── Events ─────────────────────────────────────────────────────────────────
 
-    event LiquidityAdded(
-        address indexed provider,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 liquidity
-    );
-    event LiquidityRemoved(
-        address indexed provider,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 liquidity
-    );
+    event LiquidityAdded(address indexed provider, uint256 amount0, uint256 amount1, uint256 liquidity);
+    event LiquidityRemoved(address indexed provider, uint256 amount0, uint256 amount1, uint256 liquidity);
     event Swap(
         address indexed sender,
         uint256 amount0In,
@@ -99,34 +89,28 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
      * @param protocolSharePct_ Percentage of feeRateBps sent to feeRecipient (0–100).
      * @param feeRecipient_   Address that receives the protocol portion of fees.
      */
-    constructor(
-        address tokenA,
-        address tokenB,
-        uint256 feeRateBps_,
-        uint256 protocolSharePct_,
-        address feeRecipient_
-    ) ERC20("GateDelay AMM LP", "GD-LP") Ownable(msg.sender) {
-        if (tokenA == address(0) || tokenB == address(0) || feeRecipient_ == address(0))
+    constructor(address tokenA, address tokenB, uint256 feeRateBps_, uint256 protocolSharePct_, address feeRecipient_)
+        ERC20("GateDelay AMM LP", "GD-LP")
+        Ownable(msg.sender)
+    {
+        if (tokenA == address(0) || tokenB == address(0) || feeRecipient_ == address(0)) {
             revert ZeroAddress();
+        }
         if (tokenA == tokenB) revert IdenticalTokens();
-        if (feeRateBps_ > MAX_FEE_BPS)    revert FeeTooHigh();
-        if (protocolSharePct_ > 100)       revert InvalidProtocolShare();
+        if (feeRateBps_ > MAX_FEE_BPS) revert FeeTooHigh();
+        if (protocolSharePct_ > 100) revert InvalidProtocolShare();
 
         // Enforce canonical ordering so external tooling can identify the pair.
         (token0, token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
-        feeRateBps       = feeRateBps_;
+        feeRateBps = feeRateBps_;
         protocolSharePct = protocolSharePct_;
-        feeRecipient     = feeRecipient_;
+        feeRecipient = feeRecipient_;
     }
 
     // ── Pool Queries ───────────────────────────────────────────────────────────
 
     /// @notice Returns the current reserves and the timestamp of the last update.
-    function getReserves()
-        public
-        view
-        returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast)
-    {
+    function getReserves() public view returns (uint112 _reserve0, uint112 _reserve1, uint32 _blockTimestampLast) {
         return (reserve0, reserve1, blockTimestampLast);
     }
 
@@ -155,35 +139,33 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
      *         pool fee. Implements the standard CPMM formula:
      *         amountOut = reserveOut * amountIn * (1 - fee) / (reserveIn + amountIn * (1 - fee))
      */
-    function getAmountOut(
-        uint256 amountIn,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) public view returns (uint256 amountOut) {
-        if (amountIn == 0)                    revert InsufficientInputAmount();
+    function getAmountOut(uint256 amountIn, uint256 reserveIn, uint256 reserveOut)
+        public
+        view
+        returns (uint256 amountOut)
+    {
+        if (amountIn == 0) revert InsufficientInputAmount();
         if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
 
         uint256 amountInWithFee = amountIn * (FEE_DENOMINATOR - feeRateBps);
-        amountOut = (amountInWithFee * reserveOut)
-            / (reserveIn * FEE_DENOMINATOR + amountInWithFee);
+        amountOut = (amountInWithFee * reserveOut) / (reserveIn * FEE_DENOMINATOR + amountInWithFee);
     }
 
     /**
      * @notice Returns the minimum input needed to receive a given output.
      *         amountIn = reserveIn * amountOut / ((reserveOut - amountOut) * (1 - fee)) + 1
      */
-    function getAmountIn(
-        uint256 amountOut,
-        uint256 reserveIn,
-        uint256 reserveOut
-    ) public view returns (uint256 amountIn) {
-        if (amountOut == 0)                    revert InsufficientOutputAmount();
-        if (reserveIn == 0 || reserveOut == 0)  revert InsufficientLiquidity();
-        if (amountOut >= reserveOut)            revert InsufficientLiquidity();
+    function getAmountIn(uint256 amountOut, uint256 reserveIn, uint256 reserveOut)
+        public
+        view
+        returns (uint256 amountIn)
+    {
+        if (amountOut == 0) revert InsufficientOutputAmount();
+        if (reserveIn == 0 || reserveOut == 0) revert InsufficientLiquidity();
+        if (amountOut >= reserveOut) revert InsufficientLiquidity();
 
-        amountIn = (reserveIn * amountOut * FEE_DENOMINATOR)
-            / ((reserveOut - amountOut) * (FEE_DENOMINATOR - feeRateBps))
-            + 1; // round up to protect the pool
+        amountIn =
+            (reserveIn * amountOut * FEE_DENOMINATOR) / ((reserveOut - amountOut) * (FEE_DENOMINATOR - feeRateBps)) + 1; // round up to protect the pool
     }
 
     // ── Liquidity Provision ────────────────────────────────────────────────────
@@ -248,15 +230,14 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
      * @return amount0  token0 returned.
      * @return amount1  token1 returned.
      */
-    function removeLiquidity(
-        uint256 liquidity,
-        uint256 amount0Min,
-        uint256 amount1Min,
-        address to
-    ) external nonReentrant returns (uint256 amount0, uint256 amount1) {
+    function removeLiquidity(uint256 liquidity, uint256 amount0Min, uint256 amount1Min, address to)
+        external
+        nonReentrant
+        returns (uint256 amount0, uint256 amount1)
+    {
         if (to == address(0)) revert ZeroAddress();
 
-        uint256 supply   = totalSupply();
+        uint256 supply = totalSupply();
         // LP share of balances (protocol fees stay in the contract but are not
         // part of the LP-owned portion tracked by reserves).
         uint256 balance0 = IERC20(token0).balanceOf(address(this)) - protocolFees0;
@@ -287,21 +268,18 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
      * @param to         Recipient of the output tokens.
      * @return amountOut Tokens received.
      */
-    function swapExactInput(
-        address tokenIn,
-        uint256 amountIn,
-        uint256 minOut,
-        address to
-    ) external nonReentrant returns (uint256 amountOut) {
+    function swapExactInput(address tokenIn, uint256 amountIn, uint256 minOut, address to)
+        external
+        nonReentrant
+        returns (uint256 amountOut)
+    {
         if (tokenIn != token0 && tokenIn != token1) revert InvalidToken();
-        if (amountIn == 0)          revert InsufficientInputAmount();
-        if (to == address(0))       revert ZeroAddress();
+        if (amountIn == 0) revert InsufficientInputAmount();
+        if (to == address(0)) revert ZeroAddress();
 
-        bool    zeroForOne = tokenIn == token0;
+        bool zeroForOne = tokenIn == token0;
         (uint112 r0, uint112 r1,) = getReserves();
-        (uint256 rIn, uint256 rOut) = zeroForOne
-            ? (uint256(r0), uint256(r1))
-            : (uint256(r1), uint256(r0));
+        (uint256 rIn, uint256 rOut) = zeroForOne ? (uint256(r0), uint256(r1)) : (uint256(r1), uint256(r0));
 
         amountOut = getAmountOut(amountIn, rIn, rOut);
         if (amountOut < minOut) revert SlippageExceeded();
@@ -313,7 +291,7 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
         IERC20(tokenOut).safeTransfer(to, amountOut);
         _syncReserves();
 
-        (uint256 in0, uint256 in1)   = zeroForOne ? (amountIn, uint256(0)) : (uint256(0), amountIn);
+        (uint256 in0, uint256 in1) = zeroForOne ? (amountIn, uint256(0)) : (uint256(0), amountIn);
         (uint256 out0, uint256 out1) = zeroForOne ? (uint256(0), amountOut) : (amountOut, uint256(0));
         emit Swap(msg.sender, in0, in1, out0, out1, to);
     }
@@ -327,21 +305,18 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
      * @param to         Recipient of the output tokens.
      * @return amountIn  Tokens spent.
      */
-    function swapExactOutput(
-        address tokenOut,
-        uint256 amountOut,
-        uint256 maxIn,
-        address to
-    ) external nonReentrant returns (uint256 amountIn) {
+    function swapExactOutput(address tokenOut, uint256 amountOut, uint256 maxIn, address to)
+        external
+        nonReentrant
+        returns (uint256 amountIn)
+    {
         if (tokenOut != token0 && tokenOut != token1) revert InvalidToken();
-        if (amountOut == 0)    revert InsufficientOutputAmount();
-        if (to == address(0))  revert ZeroAddress();
+        if (amountOut == 0) revert InsufficientOutputAmount();
+        if (to == address(0)) revert ZeroAddress();
 
-        bool    zeroForOne = tokenOut == token1; // selling token0 to buy token1
+        bool zeroForOne = tokenOut == token1; // selling token0 to buy token1
         (uint112 r0, uint112 r1,) = getReserves();
-        (uint256 rIn, uint256 rOut) = zeroForOne
-            ? (uint256(r0), uint256(r1))
-            : (uint256(r1), uint256(r0));
+        (uint256 rIn, uint256 rOut) = zeroForOne ? (uint256(r0), uint256(r1)) : (uint256(r1), uint256(r0));
 
         amountIn = getAmountIn(amountOut, rIn, rOut);
         if (amountIn > maxIn) revert SlippageExceeded();
@@ -353,7 +328,7 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
         IERC20(tokenOut).safeTransfer(to, amountOut);
         _syncReserves();
 
-        (uint256 in0, uint256 in1)   = zeroForOne ? (amountIn, uint256(0)) : (uint256(0), amountIn);
+        (uint256 in0, uint256 in1) = zeroForOne ? (amountIn, uint256(0)) : (uint256(0), amountIn);
         (uint256 out0, uint256 out1) = zeroForOne ? (uint256(0), amountOut) : (amountOut, uint256(0));
         emit Swap(msg.sender, in0, in1, out0, out1, to);
     }
@@ -394,13 +369,10 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
     // ── Internal ───────────────────────────────────────────────────────────────
 
     /// Mints LP tokens to `to`. Uses PRBMath uSqrt for the initial geometric mean.
-    function _mintLP(
-        address to,
-        uint256 amount0,
-        uint256 amount1,
-        uint112 r0,
-        uint112 r1
-    ) internal returns (uint256 liquidity) {
+    function _mintLP(address to, uint256 amount0, uint256 amount1, uint112 r0, uint112 r1)
+        internal
+        returns (uint256 liquidity)
+    {
         uint256 supply = totalSupply();
 
         if (supply == 0) {
@@ -413,7 +385,7 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
             // Proportional share of the smaller side.
             uint256 l0 = amount0 * supply / uint256(r0);
             uint256 l1 = amount1 * supply / uint256(r1);
-            liquidity  = l0 < l1 ? l0 : l1;
+            liquidity = l0 < l1 ? l0 : l1;
         }
 
         if (liquidity == 0) revert InsufficientLiquidityMinted();
@@ -423,8 +395,7 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
     /// Accrues the protocol portion of a swap fee into the relevant fee bucket.
     function _collectProtocolFee(address tokenIn, uint256 amountIn) internal {
         if (protocolSharePct == 0) return;
-        uint256 protocolFee = amountIn * feeRateBps * protocolSharePct
-            / (FEE_DENOMINATOR * 100);
+        uint256 protocolFee = amountIn * feeRateBps * protocolSharePct / (FEE_DENOMINATOR * 100);
         if (tokenIn == token0) {
             protocolFees0 += protocolFee;
         } else {
@@ -438,9 +409,9 @@ contract AMMPool is ERC20, Ownable, ReentrancyGuard {
         uint256 b1 = IERC20(token1).balanceOf(address(this)) - protocolFees1;
         if (b0 > type(uint112).max || b1 > type(uint112).max) revert Overflow();
         // forge-lint: disable-next-line(unsafe-typecast)
-        reserve0           = uint112(b0);
+        reserve0 = uint112(b0);
         // forge-lint: disable-next-line(unsafe-typecast)
-        reserve1           = uint112(b1);
+        reserve1 = uint112(b1);
         blockTimestampLast = uint32(block.timestamp);
         emit Sync(reserve0, reserve1);
     }

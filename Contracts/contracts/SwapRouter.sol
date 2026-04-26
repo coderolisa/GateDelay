@@ -12,7 +12,7 @@ interface IUniswapV3Router {
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
-        uint24  fee;
+        uint24 fee;
         address recipient;
         uint256 amountIn;
         uint256 amountOutMinimum;
@@ -20,17 +20,15 @@ interface IUniswapV3Router {
     }
 
     struct ExactInputParams {
-        bytes   path;
+        bytes path;
         address recipient;
         uint256 amountIn;
         uint256 amountOutMinimum;
     }
 
-    function exactInputSingle(ExactInputSingleParams calldata params)
-        external payable returns (uint256 amountOut);
+    function exactInputSingle(ExactInputSingleParams calldata params) external payable returns (uint256 amountOut);
 
-    function exactInput(ExactInputParams calldata params)
-        external payable returns (uint256 amountOut);
+    function exactInput(ExactInputParams calldata params) external payable returns (uint256 amountOut);
 }
 
 interface IQuoterV2 {
@@ -38,26 +36,21 @@ interface IQuoterV2 {
         address tokenIn;
         address tokenOut;
         uint256 amountIn;
-        uint24  fee;
+        uint24 fee;
         uint160 sqrtPriceLimitX96;
     }
 
     function quoteExactInputSingle(QuoteExactInputSingleParams memory params)
         external
-        returns (
-            uint256 amountOut,
-            uint160 sqrtPriceX96After,
-            uint32  initializedTicksCrossed,
-            uint256 gasEstimate
-        );
+        returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate);
 
     function quoteExactInput(bytes memory path, uint256 amountIn)
         external
         returns (
             uint256 amountOut,
             uint160[] memory sqrtPriceX96AfterList,
-            uint32[]  memory initializedTicksCrossedList,
-            uint256   gasEstimate
+            uint32[] memory initializedTicksCrossedList,
+            uint256 gasEstimate
         );
 }
 
@@ -65,22 +58,20 @@ interface IQuoterV2 {
 
 interface IOneInchRouterV5 {
     struct SwapDescription {
-        IERC20          srcToken;
-        IERC20          dstToken;
+        IERC20 srcToken;
+        IERC20 dstToken;
         address payable srcReceiver;
         address payable dstReceiver;
-        uint256         amount;
-        uint256         minReturnAmount;
-        uint256         flags;
+        uint256 amount;
+        uint256 minReturnAmount;
+        uint256 flags;
     }
 
     // executor and data are obtained from the 1inch Aggregation API.
-    function swap(
-        address              executor,
-        SwapDescription calldata desc,
-        bytes           calldata permit,
-        bytes           calldata data
-    ) external payable returns (uint256 returnAmount, uint256 spentAmount);
+    function swap(address executor, SwapDescription calldata desc, bytes calldata permit, bytes calldata data)
+        external
+        payable
+        returns (uint256 returnAmount, uint256 spentAmount);
 }
 
 // ─── SwapRouter ────────────────────────────────────────────────────────────────
@@ -102,13 +93,13 @@ contract SwapRouter is Ownable, ReentrancyGuard {
 
     // ── Constants ──────────────────────────────────────────────────────────────
 
-    uint256 public constant BPS_BASE    = 10_000;
-    uint256 public constant MAX_FEE_BPS = 100;   // 1 % ceiling
+    uint256 public constant BPS_BASE = 10_000;
+    uint256 public constant MAX_FEE_BPS = 100; // 1 % ceiling
 
     // ── Immutables ─────────────────────────────────────────────────────────────
 
     IUniswapV3Router public immutable uniswapRouter;
-    IQuoterV2        public immutable uniswapQuoter;
+    IQuoterV2 public immutable uniswapQuoter;
     IOneInchRouterV5 public immutable oneInchRouter;
 
     // ── State ──────────────────────────────────────────────────────────────────
@@ -118,7 +109,10 @@ contract SwapRouter is Ownable, ReentrancyGuard {
 
     // ── Types ──────────────────────────────────────────────────────────────────
 
-    enum Protocol { UNISWAP_V3, ONE_INCH }
+    enum Protocol {
+        UNISWAP_V3,
+        ONE_INCH
+    }
 
     // ── Events ─────────────────────────────────────────────────────────────────
 
@@ -153,17 +147,15 @@ contract SwapRouter is Ownable, ReentrancyGuard {
         uint256 protocolFeeBps_
     ) Ownable(msg.sender) {
         if (
-            uniswapRouter_ == address(0) ||
-            uniswapQuoter_ == address(0) ||
-            oneInchRouter_ == address(0) ||
-            feeRecipient_  == address(0)
+            uniswapRouter_ == address(0) || uniswapQuoter_ == address(0) || oneInchRouter_ == address(0)
+                || feeRecipient_ == address(0)
         ) revert ZeroAddress();
         if (protocolFeeBps_ > MAX_FEE_BPS) revert FeeTooHigh(protocolFeeBps_, MAX_FEE_BPS);
 
-        uniswapRouter  = IUniswapV3Router(uniswapRouter_);
-        uniswapQuoter  = IQuoterV2(uniswapQuoter_);
-        oneInchRouter  = IOneInchRouterV5(oneInchRouter_);
-        feeRecipient   = feeRecipient_;
+        uniswapRouter = IUniswapV3Router(uniswapRouter_);
+        uniswapQuoter = IQuoterV2(uniswapQuoter_);
+        oneInchRouter = IOneInchRouterV5(oneInchRouter_);
+        feeRecipient = feeRecipient_;
         protocolFeeBps = protocolFeeBps_;
     }
 
@@ -173,19 +165,17 @@ contract SwapRouter is Ownable, ReentrancyGuard {
      * @notice Returns the expected output for a single-hop Uniswap V3 swap.
      *         Always call via staticcall; never embed in a state-changing tx.
      */
-    function getUniswapSingleQuote(
-        address tokenIn,
-        address tokenOut,
-        uint24  poolFee,
-        uint256 amountIn
-    ) external returns (uint256 amountOut) {
+    function getUniswapSingleQuote(address tokenIn, address tokenOut, uint24 poolFee, uint256 amountIn)
+        external
+        returns (uint256 amountOut)
+    {
         if (amountIn == 0) revert ZeroAmount();
         (amountOut,,,) = uniswapQuoter.quoteExactInputSingle(
             IQuoterV2.QuoteExactInputSingleParams({
-                tokenIn:           tokenIn,
-                tokenOut:          tokenOut,
-                amountIn:          amountIn,
-                fee:               poolFee,
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                amountIn: amountIn,
+                fee: poolFee,
                 sqrtPriceLimitX96: 0
             })
         );
@@ -196,10 +186,7 @@ contract SwapRouter is Ownable, ReentrancyGuard {
      *         Path encoding: abi.encodePacked(tokenA, fee, tokenB, fee, tokenC, ...)
      *         Always call via staticcall; never embed in a state-changing tx.
      */
-    function getUniswapMultiHopQuote(bytes calldata path, uint256 amountIn)
-        external
-        returns (uint256 amountOut)
-    {
+    function getUniswapMultiHopQuote(bytes calldata path, uint256 amountIn) external returns (uint256 amountOut) {
         if (amountIn == 0) revert ZeroAmount();
         if (path.length < 43) revert InvalidPath(); // 20 + 3 + 20 bytes minimum
         (amountOut,,,) = uniswapQuoter.quoteExactInput(path, amountIn);
@@ -219,12 +206,12 @@ contract SwapRouter is Ownable, ReentrancyGuard {
     function swapSingle(
         address tokenIn,
         address tokenOut,
-        uint24  poolFee,
+        uint24 poolFee,
         uint256 amountIn,
         uint256 minAmountOut,
         address recipient
     ) external nonReentrant returns (uint256 amountOut) {
-        if (amountIn == 0)          revert ZeroAmount();
+        if (amountIn == 0) revert ZeroAmount();
         if (recipient == address(0)) revert ZeroAddress();
 
         (uint256 netIn, uint256 fee) = _pullAndDeductFee(tokenIn, amountIn);
@@ -232,12 +219,12 @@ contract SwapRouter is Ownable, ReentrancyGuard {
         IERC20(tokenIn).forceApprove(address(uniswapRouter), netIn);
         amountOut = uniswapRouter.exactInputSingle(
             IUniswapV3Router.ExactInputSingleParams({
-                tokenIn:           tokenIn,
-                tokenOut:          tokenOut,
-                fee:               poolFee,
-                recipient:         recipient,
-                amountIn:          netIn,
-                amountOutMinimum:  minAmountOut,
+                tokenIn: tokenIn,
+                tokenOut: tokenOut,
+                fee: poolFee,
+                recipient: recipient,
+                amountIn: netIn,
+                amountOutMinimum: minAmountOut,
                 sqrtPriceLimitX96: 0
             })
         );
@@ -258,24 +245,24 @@ contract SwapRouter is Ownable, ReentrancyGuard {
      * @param recipient    Address that receives the final output token.
      */
     function swapMultiHop(
-        bytes   calldata path,
+        bytes calldata path,
         address tokenIn,
         uint256 amountIn,
         uint256 minAmountOut,
         address recipient
     ) external nonReentrant returns (uint256 amountOut) {
-        if (amountIn == 0)          revert ZeroAmount();
+        if (amountIn == 0) revert ZeroAmount();
         if (recipient == address(0)) revert ZeroAddress();
-        if (path.length < 43)       revert InvalidPath();
+        if (path.length < 43) revert InvalidPath();
 
         (uint256 netIn, uint256 fee) = _pullAndDeductFee(tokenIn, amountIn);
 
         IERC20(tokenIn).forceApprove(address(uniswapRouter), netIn);
         amountOut = uniswapRouter.exactInput(
             IUniswapV3Router.ExactInputParams({
-                path:             path,
-                recipient:        recipient,
-                amountIn:         netIn,
+                path: path,
+                recipient: recipient,
+                amountIn: netIn,
                 amountOutMinimum: minAmountOut
             })
         );
@@ -311,7 +298,7 @@ contract SwapRouter is Ownable, ReentrancyGuard {
         bytes calldata permit,
         bytes calldata data
     ) external nonReentrant returns (uint256 amountOut) {
-        if (amountIn == 0)                              revert ZeroAmount();
+        if (amountIn == 0) revert ZeroAmount();
         if (recipient == address(0) || executor == address(0)) revert ZeroAddress();
 
         (uint256 netIn, uint256 fee) = _pullAndDeductFee(tokenIn, amountIn);
@@ -320,13 +307,13 @@ contract SwapRouter is Ownable, ReentrancyGuard {
         (amountOut,) = oneInchRouter.swap(
             executor,
             IOneInchRouterV5.SwapDescription({
-                srcToken:        IERC20(tokenIn),
-                dstToken:        IERC20(tokenOut),
-                srcReceiver:     payable(executor),
-                dstReceiver:     payable(recipient),
-                amount:          netIn,
+                srcToken: IERC20(tokenIn),
+                dstToken: IERC20(tokenOut),
+                srcReceiver: payable(executor),
+                dstReceiver: payable(recipient),
+                amount: netIn,
                 minReturnAmount: minAmountOut,
-                flags:           0
+                flags: 0
             }),
             permit,
             data
@@ -360,7 +347,7 @@ contract SwapRouter is Ownable, ReentrancyGuard {
     function swapBestRate(
         address tokenIn,
         address tokenOut,
-        uint24  poolFee,
+        uint24 poolFee,
         uint256 amountIn,
         uint256 minAmountOut,
         address recipient,
@@ -370,7 +357,7 @@ contract SwapRouter is Ownable, ReentrancyGuard {
         bytes calldata oneInchPermit,
         bytes calldata oneInchData
     ) external nonReentrant returns (uint256 amountOut, Protocol usedProtocol) {
-        if (amountIn == 0)          revert ZeroAmount();
+        if (amountIn == 0) revert ZeroAmount();
         if (recipient == address(0)) revert ZeroAddress();
 
         (uint256 netIn, uint256 fee) = _pullAndDeductFee(tokenIn, amountIn);
@@ -380,12 +367,12 @@ contract SwapRouter is Ownable, ReentrancyGuard {
             IERC20(tokenIn).forceApprove(address(uniswapRouter), netIn);
             amountOut = uniswapRouter.exactInputSingle(
                 IUniswapV3Router.ExactInputSingleParams({
-                    tokenIn:           tokenIn,
-                    tokenOut:          tokenOut,
-                    fee:               poolFee,
-                    recipient:         recipient,
-                    amountIn:          netIn,
-                    amountOutMinimum:  minAmountOut,
+                    tokenIn: tokenIn,
+                    tokenOut: tokenOut,
+                    fee: poolFee,
+                    recipient: recipient,
+                    amountIn: netIn,
+                    amountOutMinimum: minAmountOut,
                     sqrtPriceLimitX96: 0
                 })
             );
@@ -398,13 +385,13 @@ contract SwapRouter is Ownable, ReentrancyGuard {
             (amountOut,) = oneInchRouter.swap(
                 oneInchExecutor,
                 IOneInchRouterV5.SwapDescription({
-                    srcToken:        IERC20(tokenIn),
-                    dstToken:        IERC20(tokenOut),
-                    srcReceiver:     payable(oneInchExecutor),
-                    dstReceiver:     payable(recipient),
-                    amount:          netIn,
+                    srcToken: IERC20(tokenIn),
+                    dstToken: IERC20(tokenOut),
+                    srcReceiver: payable(oneInchExecutor),
+                    dstReceiver: payable(recipient),
+                    amount: netIn,
                     minReturnAmount: minAmountOut,
-                    flags:           0
+                    flags: 0
                 }),
                 oneInchPermit,
                 oneInchData
@@ -441,10 +428,7 @@ contract SwapRouter is Ownable, ReentrancyGuard {
 
     /// Pulls `amount` of `token` from msg.sender, sends the protocol fee to
     /// feeRecipient, and returns the net amount available for the swap.
-    function _pullAndDeductFee(address token, uint256 amount)
-        internal
-        returns (uint256 netAmount, uint256 feeAmount)
-    {
+    function _pullAndDeductFee(address token, uint256 amount) internal returns (uint256 netAmount, uint256 feeAmount) {
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         feeAmount = (amount * protocolFeeBps) / BPS_BASE;
         if (feeAmount > 0) {

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {Test, console2}  from "forge-std/Test.sol";
-import {ERC20}           from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {AMMPool}         from "../contracts/AMMPool.sol";
+import {Test, console2} from "forge-std/Test.sol";
+import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {AMMPool} from "../contracts/AMMPool.sol";
 import {UD60x18, unwrap} from "@prb/math/src/UD60x18.sol";
 
 // ─── Mock ERC20 ────────────────────────────────────────────────────────────────
@@ -15,18 +15,23 @@ contract MockERC20 is ERC20 {
         _dec = dec;
     }
 
-    function decimals() public view override returns (uint8) { return _dec; }
-    function mint(address to, uint256 amount) external { _mint(to, amount); }
+    function decimals() public view override returns (uint8) {
+        return _dec;
+    }
+
+    function mint(address to, uint256 amount) external {
+        _mint(to, amount);
+    }
 }
 
 // ─── AMMPoolTest ───────────────────────────────────────────────────────────────
 
 contract AMMPoolTest is Test {
     // ── Actors ────────────────────────────────────────────────────────────────
-    address owner        = address(this);
+    address owner = address(this);
     address feeRecipient = makeAddr("feeRecipient");
-    address lp           = makeAddr("lp");
-    address trader       = makeAddr("trader");
+    address lp = makeAddr("lp");
+    address trader = makeAddr("trader");
 
     // ── Tokens ────────────────────────────────────────────────────────────────
     MockERC20 tokenA; // 18 decimals — will be sorted to token0 or token1
@@ -39,8 +44,8 @@ contract AMMPoolTest is Test {
     MockERC20 t0;
     MockERC20 t1;
 
-    uint256 constant FEE_BPS         = 30;  // 0.30 %
-    uint256 constant PROTOCOL_SHARE  = 50;  // 50 % of fee goes to protocol
+    uint256 constant FEE_BPS = 30; // 0.30 %
+    uint256 constant PROTOCOL_SHARE = 50; // 50 % of fee goes to protocol
 
     // ── Setup ─────────────────────────────────────────────────────────────────
 
@@ -48,13 +53,7 @@ contract AMMPoolTest is Test {
         tokenA = new MockERC20("Token A", "TKA", 18);
         tokenB = new MockERC20("Token B", "TKB", 18);
 
-        pool = new AMMPool(
-            address(tokenA),
-            address(tokenB),
-            FEE_BPS,
-            PROTOCOL_SHARE,
-            feeRecipient
-        );
+        pool = new AMMPool(address(tokenA), address(tokenB), FEE_BPS, PROTOCOL_SHARE, feeRecipient);
 
         // Resolve canonical ordering.
         t0 = MockERC20(pool.token0());
@@ -80,10 +79,7 @@ contract AMMPoolTest is Test {
 
     // ── Helper: seed initial liquidity ────────────────────────────────────────
 
-    function _seedLiquidity(uint256 amount0, uint256 amount1)
-        internal
-        returns (uint256 liquidity)
-    {
+    function _seedLiquidity(uint256 amount0, uint256 amount1) internal returns (uint256 liquidity) {
         vm.prank(lp);
         (,, liquidity) = pool.addLiquidity(amount0, amount1, 0, 0, lp);
     }
@@ -156,7 +152,7 @@ contract AMMPoolTest is Test {
         _seedLiquidity(100 ether, 100 ether);
 
         uint256 lpBalance = pool.balanceOf(lp);
-        uint256 half      = lpBalance / 2;
+        uint256 half = lpBalance / 2;
 
         vm.prank(lp);
         (uint256 a0, uint256 a1) = pool.removeLiquidity(half, 0, 0, lp);
@@ -183,7 +179,7 @@ contract AMMPoolTest is Test {
         _seedLiquidity(1_000 ether, 1_000 ether);
         (uint112 r0, uint112 r1,) = pool.getReserves();
 
-        uint256 out1 = pool.getAmountOut(1 ether,  r0, r1);
+        uint256 out1 = pool.getAmountOut(1 ether, r0, r1);
         uint256 out2 = pool.getAmountOut(10 ether, r0, r1);
         uint256 out3 = pool.getAmountOut(100 ether, r0, r1);
 
@@ -205,9 +201,9 @@ contract AMMPoolTest is Test {
         _seedLiquidity(1_000 ether, 1_000 ether);
         (uint112 r0, uint112 r1,) = pool.getReserves();
 
-        uint256 amountIn  = 10 ether;
+        uint256 amountIn = 10 ether;
         uint256 amountOut = pool.getAmountOut(amountIn, r0, r1);
-        uint256 computed  = pool.getAmountIn(amountOut, r0, r1);
+        uint256 computed = pool.getAmountIn(amountOut, r0, r1);
 
         // getAmountIn rounds up by 1 — allow a 1-unit tolerance
         assertApproxEqAbs(computed, amountIn, 1);
@@ -240,8 +236,8 @@ contract AMMPoolTest is Test {
     function test_swapExactInput_token0ForToken1() public {
         _seedLiquidity(1_000 ether, 1_000 ether);
 
-        uint256 amountIn    = 10 ether;
-        uint256 t1Before    = t1.balanceOf(trader);
+        uint256 amountIn = 10 ether;
+        uint256 t1Before = t1.balanceOf(trader);
 
         vm.prank(trader);
         uint256 amountOut = pool.swapExactInput(address(t0), amountIn, 1, trader);
@@ -282,8 +278,8 @@ contract AMMPoolTest is Test {
         _seedLiquidity(1_000 ether, 1_000 ether);
 
         uint256 amountOut = 5 ether;
-        uint256 t1Before  = t1.balanceOf(trader);
-        uint256 t0Before  = t0.balanceOf(trader);
+        uint256 t1Before = t1.balanceOf(trader);
+        uint256 t0Before = t0.balanceOf(trader);
 
         vm.prank(trader);
         uint256 amountIn = pool.swapExactOutput(address(t1), amountOut, type(uint256).max, trader);

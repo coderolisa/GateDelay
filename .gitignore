@@ -105,3 +105,8 @@ artifacts/
 
 # TypeScript
 *.tsbuildinfo
+
+.agents/
+.claude/
+issue.md
+skills-lock.json

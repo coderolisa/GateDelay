@@ -9,9 +9,11 @@ contract LMSRHarness {
     function cost(uint256[] memory qOld, uint256[] memory qNew, uint256 b) external pure returns (int256) {
         return LMSR.cost(qOld, qNew, b);
     }
+
     function price(uint256[] memory q, uint256 b, uint256 i) external pure returns (uint256) {
         return LMSR.price(q, b, i);
     }
+
     function costFunction(uint256[] memory q, uint256 b) external pure returns (uint256) {
         return LMSR.costFunction(q, b);
     }
@@ -20,7 +22,7 @@ contract LMSRHarness {
 contract LMSRTest is Test {
     LMSRHarness lmsr;
     uint256 constant WAD = 1e18;
-    uint256 constant B   = 100 * WAD; // liquidity parameter
+    uint256 constant B = 100 * WAD; // liquidity parameter
 
     function setUp() public {
         lmsr = new LMSRHarness();
@@ -88,7 +90,7 @@ contract LMSRTest is Test {
         uint256[] memory qNew = new uint256[](2);
         qNew[0] = 10 * WAD;
 
-        int256 costLowB  = lmsr.cost(qOld, qNew, 10 * WAD);
+        int256 costLowB = lmsr.cost(qOld, qNew, 10 * WAD);
         int256 costHighB = lmsr.cost(qOld, qNew, 1000 * WAD);
         assertGt(costLowB, costHighB);
     }
