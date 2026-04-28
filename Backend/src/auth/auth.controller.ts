@@ -17,9 +17,10 @@ import {
   SocialLoginDto,
 } from './dto/auth.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { Throttle } from '@nestjs/throttler';
+import { RateLimit } from '../rate-limiter/rate-limiter.decorator';
 
 @Controller('auth')
+@RateLimit('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
@@ -30,7 +31,6 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }

@@ -25,6 +25,7 @@ import { WebhooksModule } from './webhooks/webhook.module';
 import { ReceiptsModule } from './receipts/receipt.module';
 import { NetworkModule } from './network/network.module';
 import { ResolutionModule } from './resolution/resolution.module';
+import { RateLimiterModule } from './rate-limiter/rate-limiter.module';
 import { ApprovalModule } from './approval/approval.module';
 import { createKeyv } from '@keyv/redis';
 import { CategoriesModule } from './categories/categories.module';
@@ -76,6 +77,7 @@ import { TradingPairModule } from './trading-pairs/trading-pair.module';
     ReceiptsModule,
     NetworkModule,
     ResolutionModule,
+    RateLimiterModule,
     ApprovalModule,
     CategoriesModule,
     TradingPairModule,
