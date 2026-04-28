@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Category, CategoryDocument } from './schemas/category.schema';
@@ -12,13 +16,17 @@ export class CategoriesService {
     private readonly marketResolverService: MarketResolverService,
   ) {}
 
-  async create(createCategoryDto: CreateCategoryDto): Promise<CategoryDocument> {
+  async create(
+    createCategoryDto: CreateCategoryDto,
+  ): Promise<CategoryDocument> {
     const { name, parentId } = createCategoryDto;
 
     if (parentId) {
       const parent = await this.categoryModel.findById(parentId);
       if (!parent) {
-        throw new NotFoundException(`Parent category with ID ${parentId} not found`);
+        throw new NotFoundException(
+          `Parent category with ID ${parentId} not found`,
+        );
       }
     }
 
@@ -30,7 +38,10 @@ export class CategoriesService {
     return category.save();
   }
 
-  async update(id: string, updateCategoryDto: Partial<CreateCategoryDto>): Promise<CategoryDocument> {
+  async update(
+    id: string,
+    updateCategoryDto: Partial<CreateCategoryDto>,
+  ): Promise<CategoryDocument> {
     const { parentId } = updateCategoryDto;
 
     if (parentId === id) {
@@ -40,15 +51,21 @@ export class CategoriesService {
     if (parentId) {
       const parent = await this.categoryModel.findById(parentId);
       if (!parent) {
-        throw new NotFoundException(`Parent category with ID ${parentId} not found`);
+        throw new NotFoundException(
+          `Parent category with ID ${parentId} not found`,
+        );
       }
-      
+
       // Check for deeper circularity
       let currentParentId = parentId;
       while (currentParentId) {
-        const currentParent = await this.categoryModel.findById(currentParentId).lean();
+        const currentParent = await this.categoryModel
+          .findById(currentParentId)
+          .lean();
         if (currentParent?.parentId?.toString() === id) {
-          throw new BadRequestException('Circular reference detected in category hierarchy');
+          throw new BadRequestException(
+            'Circular reference detected in category hierarchy',
+          );
         }
         currentParentId = currentParent?.parentId?.toString() || null;
       }
@@ -84,7 +101,7 @@ export class CategoriesService {
 
   async getTree(): Promise<any[]> {
     const allCategories = await this.categoryModel.find().lean();
-    
+
     const buildTree = (parentId: string | null = null): any[] => {
       return allCategories
         .filter((cat) => {
@@ -126,29 +143,41 @@ export class CategoriesService {
 
   async getDescendantIds(categoryId: string): Promise<string[]> {
     const descendants: string[] = [categoryId];
-    const children = await this.categoryModel.find({ parentId: new Types.ObjectId(categoryId) }).lean();
-    
+    const children = await this.categoryModel
+      .find({ parentId: new Types.ObjectId(categoryId) })
+      .lean();
+
     for (const child of children) {
-      const childDescendants = await this.getDescendantIds(child._id.toString());
+      const childDescendants = await this.getDescendantIds(
+        child._id.toString(),
+      );
       descendants.push(...childDescendants);
     }
-    
+
     return [...new Set(descendants)];
   }
 
-  async getMarketsByCategory(categoryId: string, includeChildren: boolean = true): Promise<any[]> {
+  async getMarketsByCategory(
+    categoryId: string,
+    includeChildren: boolean = true,
+  ): Promise<any[]> {
     await this.incrementPopularity(categoryId);
 
     let marketIds: string[] = [];
     if (!includeChildren) {
       const category = await this.categoryModel.findById(categoryId).lean();
-      if (!category) throw new NotFoundException(`Category ${categoryId} not found`);
+      if (!category)
+        throw new NotFoundException(`Category ${categoryId} not found`);
       marketIds = category.marketIds;
     } else {
       const allRelatedCategoryIds = await this.getDescendantIds(categoryId);
-      const categories = await this.categoryModel.find({
-        _id: { $in: allRelatedCategoryIds.map(id => new Types.ObjectId(id)) }
-      }).lean();
+      const categories = await this.categoryModel
+        .find({
+          _id: {
+            $in: allRelatedCategoryIds.map((id) => new Types.ObjectId(id)),
+          },
+        })
+        .lean();
 
       marketIds = categories.reduce((acc, cat) => {
         return [...acc, ...cat.marketIds];
@@ -161,7 +190,8 @@ export class CategoriesService {
 
   async findById(id: string): Promise<CategoryDocument> {
     const category = await this.categoryModel.findById(id);
-    if (!category) throw new NotFoundException(`Category with ID ${id} not found`);
+    if (!category)
+      throw new NotFoundException(`Category with ID ${id} not found`);
     return category;
   }
 }

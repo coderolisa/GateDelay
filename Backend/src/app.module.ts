@@ -28,6 +28,7 @@ import { ResolutionModule } from './resolution/resolution.module';
 import { ApprovalModule } from './approval/approval.module';
 import { createKeyv } from '@keyv/redis';
 import { CategoriesModule } from './categories/categories.module';
+import { TradingPairModule } from './trading-pairs/trading-pair.module';
 
 @Module({
   imports: [
@@ -50,7 +51,10 @@ import { CategoriesModule } from './categories/categories.module';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        uri: config.get<string>('MONGODB_URI', 'mongodb://localhost:27017/gatedelay'),
+        uri: config.get<string>(
+          'MONGODB_URI',
+          'mongodb://localhost:27017/gatedelay',
+        ),
       }),
     }),
     AuthModule,
@@ -74,8 +78,9 @@ import { CategoriesModule } from './categories/categories.module';
     ResolutionModule,
     ApprovalModule,
     CategoriesModule,
+    TradingPairModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule { }
+export class AppModule {}

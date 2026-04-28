@@ -7,7 +7,9 @@ import { MarketsModule } from '../markets/markets.module';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Category.name, schema: CategorySchema }]),
+    MongooseModule.forFeature([
+      { name: Category.name, schema: CategorySchema },
+    ]),
     MarketsModule,
   ],
   providers: [CategoriesService],

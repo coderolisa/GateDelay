@@ -8,8 +8,8 @@ export interface Market {
   id: string;
   title: string;
   deadline: Date;
-  totalYesStake: bigint;  // in wei
-  totalNoStake: bigint;   // in wei
+  totalYesStake: bigint; // in wei
+  totalNoStake: bigint; // in wei
   status: MarketStatus;
   outcome?: MarketOutcome;
   resolvedAt?: Date;
@@ -37,7 +37,9 @@ export class MarketResolverService {
 
   registerMarket(market: Market): void {
     this.markets.set(market.id, { ...market });
-    this.logger.log(`Market registered: ${market.id} — deadline ${market.deadline.toISOString()}`);
+    this.logger.log(
+      `Market registered: ${market.id} — deadline ${market.deadline.toISOString()}`,
+    );
   }
 
   getMarket(id: string): Market | undefined {
@@ -90,7 +92,9 @@ export class MarketResolverService {
       return null;
     }
     if (market.status !== 'active') {
-      this.logger.warn(`resolveMarket: market ${marketId} is already ${market.status}`);
+      this.logger.warn(
+        `resolveMarket: market ${marketId} is already ${market.status}`,
+      );
       return null;
     }
 
@@ -99,14 +103,18 @@ export class MarketResolverService {
 
     try {
       // 1. Fetch oracle data
-      auditLog.push(`[${new Date().toISOString()}] Fetching oracle data for market ${marketId}`);
+      auditLog.push(
+        `[${new Date().toISOString()}] Fetching oracle data for market ${marketId}`,
+      );
       const oracleData = await this.fetchOracleData(market);
       market.oracleData = oracleData;
       auditLog.push(`[${new Date().toISOString()}] Oracle data received`);
 
       // 2. Determine outcome
       const outcome = this.calculateOutcome(market, oracleData);
-      auditLog.push(`[${new Date().toISOString()}] Outcome calculated: ${outcome}`);
+      auditLog.push(
+        `[${new Date().toISOString()}] Outcome calculated: ${outcome}`,
+      );
 
       // 3. Calculate payouts
       const totalPayout = this.calculatePayouts(market, outcome, auditLog);
@@ -142,7 +150,9 @@ export class MarketResolverService {
    * Stub oracle integration. In production replace with an on-chain oracle call
    * (e.g. Chainlink, UMA Optimistic Oracle) or a trusted REST feed.
    */
-  private async fetchOracleData(market: Market): Promise<{ onTime: boolean; source: string }> {
+  private async fetchOracleData(
+    market: Market,
+  ): Promise<{ onTime: boolean; source: string }> {
     // Deterministic stub: markets with even char count → YES, odd → NO
     const onTime = market.title.length % 2 === 0;
     return { onTime, source: 'stub-oracle' };
@@ -163,11 +173,14 @@ export class MarketResolverService {
     const totalPool = market.totalYesStake + market.totalNoStake;
 
     if (outcome === 'VOID') {
-      auditLog.push(`VOID outcome — full refund of ${totalPool.toString()} wei`);
+      auditLog.push(
+        `VOID outcome — full refund of ${totalPool.toString()} wei`,
+      );
       return totalPool;
     }
 
-    const winnerPool = outcome === 'YES' ? market.totalYesStake : market.totalNoStake;
+    const winnerPool =
+      outcome === 'YES' ? market.totalYesStake : market.totalNoStake;
 
     if (winnerPool === 0n) {
       auditLog.push('No winning stakes — pool returned to protocol treasury');
@@ -176,7 +189,9 @@ export class MarketResolverService {
 
     auditLog.push(`Winner pool: ${winnerPool.toString()} wei`);
     auditLog.push(`Total pool (incl. losers): ${totalPool.toString()} wei`);
-    auditLog.push('Payout distribution logged — execute on-chain disbursement separately');
+    auditLog.push(
+      'Payout distribution logged — execute on-chain disbursement separately',
+    );
 
     return totalPool;
   }

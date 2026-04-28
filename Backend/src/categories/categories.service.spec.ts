@@ -34,7 +34,9 @@ describe('CategoriesService', () => {
   function MockModel(dto: any) {
     this.name = dto.name;
     this.parentId = dto.parentId;
-    this.save = jest.fn().mockResolvedValue({ _id: new Types.ObjectId(), ...dto });
+    this.save = jest
+      .fn()
+      .mockResolvedValue({ _id: new Types.ObjectId(), ...dto });
   }
 
   const mockMarketResolverService = {
@@ -79,8 +81,20 @@ describe('CategoriesService', () => {
       const id1 = '123456789012123456789011';
       const id2 = '123456789012123456789012';
       const cats = [
-        { _id: id1, name: 'Parent', parentId: null, popularity: 0, marketIds: [] },
-        { _id: id2, name: 'Child', parentId: id1, popularity: 0, marketIds: [] },
+        {
+          _id: id1,
+          name: 'Parent',
+          parentId: null,
+          popularity: 0,
+          marketIds: [],
+        },
+        {
+          _id: id2,
+          name: 'Child',
+          parentId: id1,
+          popularity: 0,
+          marketIds: [],
+        },
       ];
       model.find.mockReturnValue({
         lean: jest.fn().mockResolvedValue(cats),
@@ -106,9 +120,9 @@ describe('CategoriesService', () => {
 
     it('should throw NotFoundException if category not found', async () => {
       model.updateOne.mockResolvedValue({ matchedCount: 0 });
-      await expect(service.incrementPopularity('123456789012123456789012')).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.incrementPopularity('123456789012123456789012'),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -116,9 +130,9 @@ describe('CategoriesService', () => {
     it('should return markets from category and its descendants', async () => {
       const categoryId = '123456789012123456789012';
       const childId = '123456789012123456789013';
-      
+
       model.updateOne.mockResolvedValue({ matchedCount: 1 });
-      
+
       // Mock getDescendantIds behavior
       // find for descendants of categoryId
       model.find.mockReturnValueOnce({
@@ -128,7 +142,7 @@ describe('CategoriesService', () => {
       model.find.mockReturnValueOnce({
         lean: jest.fn().mockResolvedValue([]),
       });
-      
+
       // find for all categories in [categoryId, childId]
       model.find.mockReturnValueOnce({
         lean: jest.fn().mockResolvedValue([
@@ -137,33 +151,42 @@ describe('CategoriesService', () => {
         ]),
       });
 
-      marketResolver.getMarketsByIds.mockReturnValue([{ id: 'm1' }, { id: 'm2' }]);
+      marketResolver.getMarketsByIds.mockReturnValue([
+        { id: 'm1' },
+        { id: 'm2' },
+      ]);
 
       const markets = await service.getMarketsByCategory(categoryId);
       expect(markets).toHaveLength(2);
-      expect(marketResolver.getMarketsByIds).toHaveBeenCalledWith(expect.arrayContaining(['m1', 'm2']));
+      expect(marketResolver.getMarketsByIds).toHaveBeenCalledWith(
+        expect.arrayContaining(['m1', 'm2']),
+      );
     });
   });
 
   describe('update', () => {
     it('should throw BadRequestException if category is its own parent', async () => {
       const id = '123456789012123456789012';
-      await expect(service.update(id, { parentId: id })).rejects.toThrow(BadRequestException);
+      await expect(service.update(id, { parentId: id })).rejects.toThrow(
+        BadRequestException,
+      );
     });
 
     it('should detect circular references', async () => {
       const id = '123456789012123456789011';
       const parentId = '123456789012123456789012';
-      
+
       // Mock findById for parent check
-      model.findById.mockReturnValueOnce({ _id: parentId }); 
-      
+      model.findById.mockReturnValueOnce({ _id: parentId });
+
       // Mock findById for circularity check (the while loop)
       model.findById.mockReturnValueOnce({
         lean: jest.fn().mockResolvedValue({ _id: parentId, parentId: id }),
       });
-      
-      await expect(service.update(id, { parentId: parentId })).rejects.toThrow(BadRequestException);
+
+      await expect(service.update(id, { parentId: parentId })).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -181,7 +204,9 @@ describe('CategoriesService', () => {
         { parentId: expect.any(Types.ObjectId) },
         { $set: { parentId: parentId } },
       );
-      expect(model.deleteOne).toHaveBeenCalledWith({ _id: expect.any(Types.ObjectId) });
+      expect(model.deleteOne).toHaveBeenCalledWith({
+        _id: expect.any(Types.ObjectId),
+      });
     });
   });
 });
