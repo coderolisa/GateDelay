@@ -65,7 +65,7 @@ export class AiService {
   }
 
   async getCachedAnalysis(marketId: string): Promise<MarketAnalysis | null> {
-    return this.cache.get<MarketAnalysis>(`ai:analysis:${marketId}`) ?? null;
+    return (await this.cache.get<MarketAnalysis>(`ai:analysis:${marketId}`)) ?? null;
   }
 
   private async fetchFromGroq(

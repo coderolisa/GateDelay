@@ -7,7 +7,7 @@ import {
   IsDefined,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { SettingCategory } from '../user-settings.entity';
+import type { SettingCategory } from '../user-settings.entity';
 
 const VALID_CATEGORIES: SettingCategory[] = [
   'notifications',

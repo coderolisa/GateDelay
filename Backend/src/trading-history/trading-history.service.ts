@@ -21,6 +21,9 @@ export class TradingHistoryService {
   }
 
   getTradingHistory(userId: string, dto: GetTradingHistoryDto) {
+    const limit = dto.limit ?? 20;
+    const offset = dto.offset ?? 0;
+
     let userTrades = [...this.trades.values()].filter(
       (t) => t.userId === userId,
     );
@@ -64,12 +67,12 @@ export class TradingHistoryService {
 
     // Apply pagination
     const total = userTrades.length;
-    const paginated = userTrades.slice(dto.offset, dto.offset + dto.limit);
+    const paginated = userTrades.slice(offset, offset + limit);
 
     return {
       total,
-      offset: dto.offset,
-      limit: dto.limit,
+      offset,
+      limit,
       data: paginated,
     };
   }

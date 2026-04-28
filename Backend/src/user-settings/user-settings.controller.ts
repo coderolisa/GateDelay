@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { UserSettingsService } from './user-settings.service';
-import { SettingCategory } from './user-settings.entity';
+import type { SettingCategory } from './user-settings.entity';
 import {
   UpdateSettingDto,
   UpdateCategoryDto,

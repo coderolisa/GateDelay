@@ -3,26 +3,35 @@ import {
   IsOptional,
   IsDateString,
   IsEnum,
+  IsNumber,
   Min,
-  Max,
 } from 'class-validator';
-import { TradeType, TradeStatus } from '../trading-history.entity';
+import { Type } from 'class-transformer';
+
+const TRADE_TYPES = ['buy', 'sell', 'redeem', 'deposit', 'withdraw'] as const;
+const TRADE_STATUSES = ['pending', 'confirmed', 'failed'] as const;
+type TradeType = (typeof TRADE_TYPES)[number];
+type TradeStatus = (typeof TRADE_STATUSES)[number];
 
 export class GetTradingHistoryDto {
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   @Min(1)
   limit?: number = 20;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
   @Min(0)
   offset?: number = 0;
 
   @IsOptional()
-  @IsEnum(['buy', 'sell', 'redeem', 'deposit', 'withdraw'])
+  @IsEnum(TRADE_TYPES)
   type?: TradeType;
 
   @IsOptional()
-  @IsEnum(['pending', 'confirmed', 'failed'])
+  @IsEnum(TRADE_STATUSES)
   status?: TradeStatus;
 
   @IsOptional()
@@ -52,7 +61,7 @@ export class ExportTradingHistoryDto {
   format?: 'csv' | 'json' = 'csv';
 
   @IsOptional()
-  @IsEnum(['buy', 'sell', 'redeem', 'deposit', 'withdraw'])
+  @IsEnum(TRADE_TYPES)
   type?: TradeType;
 
   @IsOptional()

@@ -57,7 +57,7 @@ export class CategoriesService {
       }
 
       // Check for deeper circularity
-      let currentParentId = parentId;
+      let currentParentId: string | null = parentId;
       while (currentParentId) {
         const currentParent = await this.categoryModel
           .findById(currentParentId)
@@ -67,7 +67,7 @@ export class CategoriesService {
             'Circular reference detected in category hierarchy',
           );
         }
-        currentParentId = currentParent?.parentId?.toString() || null;
+        currentParentId = currentParent?.parentId?.toString() ?? null;
       }
     }
 

@@ -114,7 +114,7 @@ export class WebhookService {
     return Array.from(this.webhookStatuses.values());
   }
 
-  retryWebhook(eventId: string): WebhookStatus {
+  async retryWebhook(eventId: string): Promise<WebhookStatus> {
     const event = this.webhookEvents.get(eventId);
     if (!event) {
       throw new BadRequestException('Webhook event not found');
