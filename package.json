@@ -1,0 +1,9 @@
+{
+  "name": "role-manager",
+  "version": "1.0.0",
+  "private": true,
+  "devDependencies": {
+    "hardhat": "^2.16.0",
+    "solc": "^0.8.20"
+  }
+}
