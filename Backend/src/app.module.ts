@@ -36,6 +36,7 @@ import { WithdrawalModule } from './withdrawal/withdrawal.module';
 import { ApiKeysModule } from './api-keys/api-keys.module';
 import { AppCacheModule } from './cache/cache.module';
 import { NotificationModule } from './notifications/notification.module';
+import { TradeEngineModule } from './trade-engine/trade-engine.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { NotificationModule } from './notifications/notification.module';
     ApiKeysModule,
     AppCacheModule,
     NotificationModule,
+    TradeEngineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
